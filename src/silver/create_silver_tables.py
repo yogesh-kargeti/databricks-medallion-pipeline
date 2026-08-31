@@ -26,6 +26,10 @@ SILVER_PRODUCTS = "silver_products"
 
 # COMMAND ----------
 
+# MAGIC %run ./03_quality_type_validation
+
+# COMMAND ----------
+
 # MAGIC %run ./04_quality_referential_integrity
 
 # COMMAND ----------
@@ -47,6 +51,27 @@ def get_spark() -> SparkSession:
     spark = SparkSession.builder.appName("create_silver_tables").getOrCreate()
     spark.conf.set("spark.sql.session.timeZone", "UTC")
     return spark
+
+
+def combine_business_logic(dataframe: DataFrame) -> DataFrame:
+    """AND type-validation and numeric rules into one Check 4 flag.
+
+    NULL on either side means that half of Check 4 does not apply to the
+    table. N/A is treated as pass for the AND, unless both sides are N/A.
+    Intermediate columns are dropped so Silver only stores business_logic_passed.
+    """
+    type_flag = col("type_validation_passed")
+    numeric_flag = col("numeric_rules_passed")
+    type_ok = type_flag.isNull() | type_flag
+    numeric_ok = numeric_flag.isNull() | numeric_flag
+    both_na = type_flag.isNull() & numeric_flag.isNull()
+    return (
+        dataframe.withColumn(
+            "business_logic_passed",
+            when(both_na, lit(None).cast("boolean")).otherwise(type_ok & numeric_ok),
+        )
+        .drop("type_validation_passed", "numeric_rules_passed")
+    )
 
 
 def add_quality_check_result(dataframe: DataFrame, check_columns: tuple[str, ...]) -> DataFrame:
@@ -101,7 +126,9 @@ def create_silver_tables(spark: SparkSession) -> None:
 
     customers = flag_customer_completeness(customers)
     customers = flag_customer_uniqueness(customers)
-    customers = flag_customer_business_logic(customers)
+    customers = flag_customer_type_validation(customers)
+    customers = customers.withColumn("numeric_rules_passed", lit(None).cast("boolean"))
+    customers = combine_business_logic(customers)
     customers = customers.withColumn(
         "referential_integrity_passed",
         lit(None).cast("boolean"),
@@ -118,6 +145,8 @@ def create_silver_tables(spark: SparkSession) -> None:
 
     products = flag_product_uniqueness(products)
     products = flag_product_business_logic(products)
+    products = products.withColumn("type_validation_passed", lit(None).cast("boolean"))
+    products = combine_business_logic(products)
     products = products.withColumn(
         "completeness_passed",
         lit(None).cast("boolean"),
@@ -138,7 +167,9 @@ def create_silver_tables(spark: SparkSession) -> None:
     orders = flag_order_completeness(orders)
     orders = flag_order_uniqueness(orders)
     orders = flag_order_referential_integrity(orders, customers, products)
+    orders = flag_order_type_validation(orders)
     orders = flag_order_business_logic(orders)
+    orders = combine_business_logic(orders)
     orders = add_quality_check_result(
         orders,
         (
@@ -186,3 +217,7 @@ def main() -> None:
 # COMMAND ----------
 
 main()
+
+# COMMAND ----------
+
+# MAGIC %run ./06_quality_metrics_report
