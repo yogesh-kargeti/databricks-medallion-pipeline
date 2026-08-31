@@ -25,7 +25,7 @@ from pyspark.sql.utils import AnalysisException
 
 LOGGER = logging.getLogger(__name__)
 
-CSV_PATH = "dbfs:/FileStore/databricks-medallion-pipeline/data/orders.csv"
+CSV_PATH = "/Volumes/workspace/default/databricks_assess/orders.csv"
 BRONZE_TABLE = "bronze_orders"
 BATCH_ID = "20260831"
 
