@@ -15,8 +15,6 @@ batch_id.
 
 BATCH_ID = "20260831"
 
-spark.conf.set("pipeline.batch_id", BATCH_ID)
-
 # COMMAND ----------
 
 # MAGIC %run ./01_ingest_customers

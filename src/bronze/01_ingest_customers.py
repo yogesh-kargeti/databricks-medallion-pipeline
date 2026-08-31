@@ -27,7 +27,10 @@ LOGGER = logging.getLogger(__name__)
 
 CSV_PATH = "/Volumes/workspace/default/databricks_assess/customers.csv"
 BRONZE_TABLE = "bronze_customers"
-BATCH_ID = "20260831"
+_CUSTOMERS_CSV_PATH_DEFAULT = CSV_PATH
+_CUSTOMERS_BRONZE_TABLE_DEFAULT = BRONZE_TABLE
+if "BATCH_ID" not in globals():
+    BATCH_ID = "20260831"
 
 CUSTOMER_SCHEMA = StructType(
     [
@@ -53,10 +56,10 @@ def get_spark() -> SparkSession:
 
 
 def resolve_config(spark: SparkSession) -> tuple[str, str, str]:
-    """Read path, table, and batch_id from Spark conf when set, else module defaults."""
-    csv_path = spark.conf.get("pipeline.csv.customers", CSV_PATH)
-    bronze_table = spark.conf.get("pipeline.bronze.customers", BRONZE_TABLE)
-    batch_id = spark.conf.get("pipeline.batch_id", BATCH_ID)
+    """Read path, table, and batch_id from shared notebook globals, else defaults."""
+    csv_path = globals().get("CUSTOMERS_CSV_PATH", _CUSTOMERS_CSV_PATH_DEFAULT)
+    bronze_table = globals().get("CUSTOMERS_BRONZE_TABLE", _CUSTOMERS_BRONZE_TABLE_DEFAULT)
+    batch_id = globals().get("BATCH_ID", "20260831")
     if not BATCH_ID_PATTERN.fullmatch(batch_id):
         raise ValueError(
             f"batch_id {batch_id!r} must match {BATCH_ID_PATTERN.pattern}"
