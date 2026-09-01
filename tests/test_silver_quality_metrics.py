@@ -1,3 +1,4 @@
+# Databricks notebook source
 """Integration assertions for seeded Silver quality-metric counts.
 
 Run this test in Databricks after ``create_silver_tables.py`` so an active
