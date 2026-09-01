@@ -2,7 +2,7 @@
 """Build Gold tables from the three Gold SQL files. Writes each table once.
 
 Check SQL stays in 01/02/04. This notebook substitutes batch_id (and the
-High-Value threshold) and is the only Gold writer. 03_daily_weekly_trends is
+High-Value percentile) and is the only Gold writer. 03_daily_weekly_trends is
 out of Core scope.
 """
 
@@ -12,8 +12,8 @@ from pathlib import Path
 
 if "BATCH_ID" not in globals():
     BATCH_ID = "20260831"
-if "HIGH_VALUE_THRESHOLD" not in globals():
-    HIGH_VALUE_THRESHOLD = 1000
+if "HIGH_VALUE_PERCENTILE" not in globals():
+    HIGH_VALUE_PERCENTILE = 0.80
 
 GOLD_SALES_BY_PRODUCT = "gold_sales_by_product"
 GOLD_REVENUE_BY_CUSTOMER = "gold_revenue_by_customer"
@@ -50,13 +50,13 @@ def gold_sql_dir() -> Path:
         return Path(".")
 
 
-def load_gold_sql(filename: str, batch_id: str, high_value_threshold: int) -> str:
-    """Read a Gold SELECT and fill batch_id plus the High-Value threshold."""
+def load_gold_sql(filename: str, batch_id: str, high_value_percentile: float) -> str:
+    """Read a Gold SELECT and fill batch_id plus the High-Value percentile."""
     sql_text = (gold_sql_dir() / filename).read_text(encoding="utf-8")
     return (
         sql_text.format(
             batch_id=batch_id,
-            high_value_threshold=high_value_threshold,
+            high_value_percentile=high_value_percentile,
         )
         .strip()
         .rstrip(";")
@@ -81,10 +81,12 @@ def write_gold_idempotent(
 def create_gold_tables(spark: SparkSession) -> None:
     """Run sales-by-product, revenue-by-customer, then segmentation for one batch."""
     batch_id = globals().get("BATCH_ID", "20260831")
-    high_value_threshold = int(globals().get("HIGH_VALUE_THRESHOLD", 1000))
+    high_value_percentile = float(globals().get("HIGH_VALUE_PERCENTILE", 0.80))
+    if not 0 < high_value_percentile < 1:
+        raise ValueError("HIGH_VALUE_PERCENTILE must be between 0 and 1")
 
     for filename, table_name in GOLD_STEPS:
-        query = load_gold_sql(filename, batch_id, high_value_threshold)
+        query = load_gold_sql(filename, batch_id, high_value_percentile)
         result = spark.sql(query)
         written = write_gold_idempotent(result, table_name, batch_id)
         LOGGER.info(

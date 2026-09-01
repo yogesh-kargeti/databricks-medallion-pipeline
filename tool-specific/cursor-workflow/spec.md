@@ -401,18 +401,27 @@ Columns specified by the requirements:
 
 Assign exactly one segment to each valid customer, in this precedence order:
 
-1. **High-Value:** `total_revenue >= 1,000`, regardless of order count.
-2. **Repeat:** `total_revenue < 1,000` and `total_orders >= 2`.
+1. **High-Value:** `total_revenue` is at or above the configured revenue
+   percentile for the current batch, regardless of order count.
+2. **Repeat:** below the High-Value cutoff and `total_orders >= 2`.
 3. **One-Time:** `total_orders = 1`.
 4. **Inactive:** `total_orders = 0`.
 
-The requirements do not define thresholds. A fixed currency threshold of 1,000
-is selected because it is transparent, deterministic, and easy to validate in
-this synthetic learning project; precedence keeps categories mutually
-exclusive. The value must be a named configuration setting, not embedded
-throughout SQL. Before production use, it would be replaced by a
-business-approved, currency-aware threshold or a distribution-based rule
-validated against real commercial behavior.
+The requirements do not define the High-Value threshold. The original fixed
+cutoff of 1,000 was rejected after profiling the generated Gold data: 9,823 of
+9,860 customers qualified as High-Value because typical order and customer
+revenues are much higher. The observed distribution has median revenue of
+10,536.39 and 80th-percentile revenue of 15,144.13.
+
+The default is therefore the **80th percentile (`0.80`) of `total_revenue`
+within each batch**. On the profiled seed this produces approximately 1,972
+High-Value, 7,859 Repeat, 25 One-Time, and 4 Inactive customers. This makes
+High-Value a relative top-customer segment and adapts when the generated
+revenue scale changes. The percentile is the named configuration setting
+`HIGH_VALUE_PERCENTILE`; SQL calculates the currency cutoff from
+`gold_revenue_by_customer`. Segment precedence keeps categories mutually
+exclusive. One-Time and Inactive remain small because their sizes are driven
+by order frequency, not by the revenue cutoff.
 
 Aggregate the assigned customer rows by `segment_type`. `avg_revenue` is
 average customer revenue in the segment, and `total_revenue` is the sum of
@@ -490,8 +499,9 @@ adding one would require an out-of-scope trend aggregation.
 - Assert invalid, pending, and cancelled orders do not affect revenue.
 - Assert Gold revenue reconciles between product, customer, and segmentation
   totals.
-- Test segmentation at 0 orders, 1 order, 2 orders, revenue 999.99, and revenue
-  1,000, ensuring every valid customer belongs to exactly one segment.
+- Test segmentation at 0 orders, 1 order, 2 orders, and immediately below/at
+  the calculated percentile cutoff, ensuring every valid customer belongs to
+  exactly one segment.
 
 ### End-to-end and dashboard validation
 
@@ -517,7 +527,7 @@ adding one would require an out-of-scope trend aggregation.
 - **Traceability:** Preserve `batch_id`, source-file lineage, and ingestion
   timestamps through Silver; quality metrics must be attributable to a batch.
 - **Configuration:** Paths, catalog/schema names, decimal definitions, batch
-  IDs, and the High-Value threshold must be configured at the top level rather
+  IDs, and the High-Value percentile must be configured at the top level rather
   than hardcoded in transformation logic.
 - **Maintainability:** Use readable Python/PySpark for full datasets and
   formatted SQL for aggregations and dashboard queries. Keep Bronze, Silver,

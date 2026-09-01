@@ -18,7 +18,7 @@ Daily synthetic CSVs land in Databricks and move through four stages:
   histogram, segmentation pie).
 
 Layers stay in separate scripts. Paths, `batch_id`, DECIMAL type, as-of
-date, and the High-Value threshold are configuration, not hardcoded
+date, and the High-Value percentile are configuration, not hardcoded
 literals. Reruns of the same `batch_id` must not duplicate data.
 
 Core scope is three Gold tables. The guide’s “four aggregations” /
@@ -76,8 +76,8 @@ Only passing Silver rows. Only `Completed` orders contribute to revenue.
   completed orders). `lifetime_value_actual` is summed valid completed
   revenue, not source `lifetime_value`.
 - **`gold_customer_segmentation`:** exactly one of High-Value
-  (`total_revenue >= 1,000`), Repeat (2+ orders below that), One-Time
-  (one order), Inactive (zero orders). Threshold is configurable.
+  (at or above batch revenue P80), Repeat (2+ orders below that), One-Time
+  (one order), Inactive (zero orders). Percentile is configurable.
 
 `total_orders` is distinct completed `order_id`. `avg_order_value` is
 `total_revenue / total_orders`. Dashboard queries Gold only; no date
@@ -110,7 +110,7 @@ separately, then the 700 total.
    flags vs seed inventory → Gold reconciling product, customer, and
    segment revenue.
 4. Prefer a failing test that names the expected count or edge case
-   (NULL vs orphan, 999.99 vs 1,000, duplicate-group members).
+   (NULL vs orphan, below vs at P80, duplicate-group members).
 5. Change only the failing rule or transform; do not silently edit
    unrelated layers.
 6. Re-run the targeted test, then the batch idempotency check.

@@ -121,7 +121,7 @@ in `data-model.md`. Quality-issue inventories belong in
 - **Traceability.** `batch_id`, source file, and ingestion timestamp persist
   through Silver; quality metrics are batch-attributable.
 - **Configuration over hardcoding.** Paths, catalog/schema names, decimal
-  type, batch IDs, as-of date, and the High-Value threshold live in config.
+  type, batch IDs, as-of date, and the High-Value percentile live in config.
 - **Documented transforms.** Intent-focused docstrings; comments explain
   why a check exists, especially when it maps to an injected issue.
 - **Layer separation.** Bronze, Silver, Gold, and dashboard stay in
@@ -157,8 +157,8 @@ Treat them as requirements unless a later decision changes them.
    Cancelled are not settled revenue.
 9. **`lifetime_value_actual`** is summed valid completed-order revenue in this
    dataset, not the source `lifetime_value` column.
-10. **Segmentation precedence and High-Value ≥ 1,000** (configurable). Each
-    valid customer gets exactly one segment.
+10. **Segmentation precedence and High-Value at or above the batch revenue
+    P80** (configurable). Each valid customer gets exactly one segment.
 11. **Valid customers with no completed orders** still appear in
     `gold_revenue_by_customer` and count as Inactive.
 12. **Check 4** is the single fourth quality check (validity/business logic),
@@ -186,9 +186,9 @@ Treat them as requirements unless a later decision changes them.
 - `order_status` / `customer_segment` with unexpected casing or extra spaces.
 - Customer with only Pending or Cancelled orders (Inactive for Gold, revenue
   zero).
-- Customer exactly at 999.99 vs 1,000.00 revenue for High-Value.
-- Customer with two completed orders totaling less than 1,000 (Repeat).
-- Customer with one completed order ≥ 1,000 (High-Value, not One-Time).
+- Customer immediately below vs exactly at the calculated P80 cutoff.
+- Customer with two completed orders below P80 (Repeat).
+- Customer with one completed order at or above P80 (High-Value, not One-Time).
 - Product with `price` = 0 vs `cost` > `price` on different product IDs.
 - Rerun of the same `batch_id`; missing CSV; extra or missing header columns;
   a value that cannot cast to the declared type.
