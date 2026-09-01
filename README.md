@@ -4,9 +4,7 @@ E-commerce CSVs (customers, orders, products) through Bronze → Silver → Gold
 → a Databricks SQL dashboard. Synthetic data only.
 
 Built and tested on **Databricks Free Edition**: serverless compute and
-**Unity Catalog volumes**, not classic DBFS `/FileStore`.
-
-Default batch: `20260831`.
+**Unity Catalog volumes**
 
 ## 1. Clone into Databricks Repos
 
