@@ -119,7 +119,7 @@ matches `data-quality-strategy.md` and `_all` distinct bad rows equal
 1. Open Databricks SQL.
 2. Follow `src/dashboard/DASHBOARD_GUIDE.md`.
 3. Paste each query from `src/dashboard/dashboard_queries.sql` into a saved
-   query (`batch_id = '20260831'` is already in the SQL).
+   query.
 4. Build tiles: top 10 products (bar), customer revenue (histogram or tile
    2b bar), segmentation (pie).
 
