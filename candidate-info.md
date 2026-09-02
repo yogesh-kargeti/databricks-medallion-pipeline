@@ -4,10 +4,10 @@
 Yogesh Kargeti
 
 **Role:**
-[Your role — SE / SSE / ATL/TL / other]
+SSE
 
 **Primary Technology Stack:**
-Python / PySpark, SQL, Databricks
+Python, PySpark, SQL, Databricks
 
 **Primary AI Tool Used:**
 Cursor
